@@ -24,7 +24,8 @@ function _taxonomy_resource_definition() {
               'description' => 'The tid of the taxonomy term to get',
             ),
           ),
-          'access arguments' => array('access content'),
+          'access callback' => '_taxonomy_resource_retrieve_access',
+          'access arguments append' => TRUE,
           'file' => array('type' => 'inc', 'module' => 'services', 'name' => 'resources/taxonomy_resource'),
         ),
         'create' => array(
@@ -392,8 +393,35 @@ function _taxonomy_term_resource_create($term) {
   // Adds backwards compatability with regression fixed in #1083242
   $term = _services_arg_value($term, 'term');
 
-  $term = (object)$term;
-  return taxonomy_term_save($term);
+  // Load the required includes for saving term data
+  // with drupal_form_submit().
+  module_load_include('inc', 'taxonomy', 'taxonomy.admin');
+
+  // Set term data.
+  $form_state['values'] = $term;
+
+  // Set the form state op.
+  $form_state['values']['op'] = variable_get('services_taxonomy_term_save_button_resource_create_update', t('Save'));
+
+  // Execute the edit form.
+  $form_state['programmed_bypass_access_check'] = FALSE;
+
+  $form_state['build_info']['args'] = array($term);
+
+  drupal_form_submit('taxonomy_form_term', $form_state);
+
+  // Error if needed.
+  if ($errors = form_get_errors()) {
+    return services_error(implode(" ", $errors), 406, array('form_errors' => $errors));
+  }
+  else {
+    $term = array('tid' => $form_state['term']->tid);
+    if ($uri = services_resource_uri(array('taxonomy_term', $term['tid']))) {
+      $term['uri'] = $uri;
+    }
+
+    return $term;
+  }
 }
 
 /**
@@ -401,20 +429,45 @@ function _taxonomy_term_resource_create($term) {
  *
  * @param $tid
  *   Unique identifier for the taxonomy term to update.
- * @param $term
+ * @param $update
  *   Array of values for the taxonomy term.
  * @return
  *   Status constant indicating if term was inserted or updated.
  *
  * @see taxonomy_save_term()
  */
-function _taxonomy_term_resource_update($tid, $term) {
+function _taxonomy_term_resource_update($tid, $update) {
   // Adds backwards compatability with regression fixed in #1083242
-  $term = _services_arg_value($term, 'term');
+  $update = _services_arg_value($update, 'term');
 
-  $term = (object) $term;
-  $term->tid = $tid;
-  return taxonomy_term_save($term);
+  // Load the required includes for saving term data
+  // with drupal_form_submit().
+  module_load_include('inc', 'taxonomy', 'taxonomy.admin');
+
+  // Set term update data.
+  $form_state['values'] = $update;
+
+  $form_state['term'] = taxonomy_term_load($tid);
+
+  // Set the form state op.
+  $form_state['values']['op'] = variable_get('services_taxonomy_term_save_button_resource_create_update', t('Save'));
+
+  // Execute the edit form.
+  $form_state['programmed_bypass_access_check'] = FALSE;
+
+  $form_state['build_info']['args'] = array($update);
+
+  drupal_form_submit('taxonomy_form_term', $form_state);
+
+  // Error if exists.
+  if ($errors = form_get_errors()) {
+    return services_error(implode(" ", $errors), 406, array('form_errors' => $errors));
+  }
+  else {
+    $update['tid'] = $form_state['term']->tid;
+
+    return $update;
+  }
 }
 
 /**
@@ -576,30 +629,47 @@ function taxonomy_service_select_nodes($tid = '', $pager, $limit,  $order) {
 }
 
 /**
- * Access callback for term updating.
+ * Access callback for term retrieving.
  *
- * @param $term
+ * @param int $tid
  *   An taxonomy term object
- * @return
+ * @return boolean
  *   Boolean whether or not the user has access to create or edit the term.
  */
-function _taxonomy_resource_update_access($tid, $term) {
-  // Adds backwards compatability with regression fixed in #1083242
-  $term = _services_arg_value($term, 'term');
-
-  $term = (object) $term;
-  if (!isset($term->vid)) {
-    return services_error(t('Term object needs vid property.'), 406);
+function _taxonomy_resource_retrieve_access($tid) {
+  $term = taxonomy_term_load($tid);
+  if (empty($term)) {
+    return services_error(t('There is no taxonomy term with ID @tid.', array('@tid' => $tid)), 404);
   }
+
+  return user_access('access content');
+}
+
+/**
+ * Access callback for term updating.
+ *
+ * @param int $tid
+ *   Taxonomy term ID.
+ *
+ * @return boolean
+ *   Boolean whether or not the user has access to create or edit the term.
+ */
+function _taxonomy_resource_update_access($tid) {
+  $term = taxonomy_term_load($tid);
+  if (empty($term)) {
+    return services_error(t('There is no taxonomy term with ID @tid.', array('@tid' => $tid)), 404);
+  }
+
   return user_access('edit terms in ' . $term->vid) || user_access('administer taxonomy');
 }
 
 /**
  * Access callback for term creating.
  *
- * @param $term
- *   An taxonomy term object
- * @return
+ * @param mixed $term
+ *   An taxonomy term object.
+ *
+ * @return boolean
  *   Boolean whether or not the user has access to create or edit the term.
  */
 function _taxonomy_resource_create_access($term) {
@@ -607,6 +677,18 @@ function _taxonomy_resource_create_access($term) {
   $term = _services_arg_value($term, 'term');
 
   $term = (object) $term;
+  $errors = array();
+
+  foreach (array('name', 'vid') as $prop) {
+    if (empty($term->$prop)) {
+      $errors[] = t('Term object needs !prop property.', array('!prop' => $prop));
+    }
+  }
+
+  if (!empty($errors)) {
+    return services_error(implode(" ", $errors), 406, array('errors' => $errors));
+  }
+
   return user_access('edit terms in ' . $term->vid) || user_access('administer taxonomy');
 }
 
