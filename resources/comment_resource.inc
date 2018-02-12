@@ -395,7 +395,7 @@ function _comment_resource_access($op = 'view', $args = array()) {
   }
   if (isset($comment->nid)) {
     $node = node_load($comment->nid);
-    if ($op == 'create' && !$node)) {
+    if ($op == 'create' && !$node) {
       return services_error(t('Node nid: @nid does not exist.', array(
         '@nid' => $comment->nid,
       )), 406);
