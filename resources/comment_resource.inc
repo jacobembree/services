@@ -393,10 +393,12 @@ function _comment_resource_access($op = 'view', $args = array()) {
   else {
     $comment = comment_load($args[0]);
   }
-  if(isset($comment->nid)) {
+  if (isset($comment->nid)) {
     $node = node_load($comment->nid);
-    if($op == 'create' && !$node->nid) {
-      return services_error(t('Node nid: @nid does not exist.', array('@nid' => $comment->nid)), 406);
+    if ($op == 'create' && !$node)) {
+      return services_error(t('Node nid: @nid does not exist.', array(
+        '@nid' => $comment->nid,
+      )), 406);
     }
   }
   if (user_access('administer comments')) {
@@ -413,6 +415,6 @@ function _comment_resource_access($op = 'view', $args = array()) {
     case 'create':
       // Check if the user may post comments, node has comments enabled
       // and that the user has access to the node.
-      return user_access('post comments') && ($node->comment == COMMENT_NODE_OPEN);
+      return user_access('post comments') && isset($node->comment) && ($node->comment == COMMENT_NODE_OPEN);
   }
 }
