@@ -292,6 +292,10 @@ function _user_resource_retrieve($uid) {
     return services_error(t('There is no user with ID @uid.', array('@uid' => $uid)), 404);
   }
 
+  $uri = entity_uri('user', $account);
+  $account->path = url($uri['path'], array('absolute' => TRUE));
+  unset($account->uri);
+
   services_remove_user_data($account);
 
   //Lets check field_permissions
