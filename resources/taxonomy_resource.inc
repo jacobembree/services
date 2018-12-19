@@ -739,7 +739,7 @@ function _taxonomy_term_resource_index($page, $fields, $parameters, $page_size, 
   $taxonomy_select->join('taxonomy_term_hierarchy', 'tth', 't.tid = tth.tid');
   $taxonomy_select->addTag('taxonomy_term_access');
   $taxonomy_select->fields('tth');
-  
+
   services_resource_build_index_query($taxonomy_select, $page, $fields, $parameters, $page_size, 'taxonomy_term', $options);
 
   $results = services_resource_execute_index_query($taxonomy_select);
