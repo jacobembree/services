@@ -709,7 +709,7 @@ function _taxonomy_resource_delete_access($tid) {
 }
 
 /**
- * Return an array of optionally paged tids baed on a set of criteria.
+ * Return an array of optionally paged tids based on a set of criteria.
  *
  * An example request might look like
  *
@@ -747,7 +747,7 @@ function _taxonomy_term_resource_index($page, $fields, $parameters, $page_size, 
 }
 
 /**
- * Return an array of optionally paged vids baed on a set of criteria.
+ * Return an array of optionally paged vids based on a set of criteria.
  *
  * An example request might look like
  *
