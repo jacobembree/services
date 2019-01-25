@@ -413,6 +413,9 @@ function _comment_resource_access($op = 'view', $args = array()) {
     case 'edit':
       return comment_access('edit', $comment);
     case 'create':
+      if (!isset($comment->nid)) {
+        return services_error(t('Missing required argument nid'), variable_get('services_deprecated_missing_arg_code', 401));
+      }
       // Check if the user may post comments, node has comments enabled
       // and that the user has access to the node.
       return user_access('post comments') && isset($node->comment) && ($node->comment == COMMENT_NODE_OPEN);
